@@ -48,6 +48,8 @@
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1.1);
     directionalLight.position.set(10, 10, 10);
     directionalLight.castShadow = true;
+       directionalLight.shadow.mapSize.width = 1024;
+    directionalLight.shadow.mapSize.height = 1024;
     scene.add(directionalLight);
 
     // Ajout des contrôles (zoom, rotation)
@@ -56,6 +58,14 @@
     controls.minDistance = 4.5;
     controls.maxDistance = 12;
 
+        // Floor
+    const floorGeometry = new THREE.PlaneGeometry(20, 20);
+    const floorMaterial = new THREE.ShadowMaterial({ opacity: 0.4 });
+    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -0.4;
+    floor.receiveShadow = true;
+    scene.add(floor);
     // Chargement du modèle GLB
     const loader = new GLTFLoader();
     loader.load(
