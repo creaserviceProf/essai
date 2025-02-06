@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Afficher un fichier FBX avec Three.js</title>
+  <style>
+    body { margin: 0; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.126.0/build/three.module.js';
+    import { FBXLoader } from 'https://cdn.jsdelivr.net/npm/three@0.126.0/examples/jsm/loaders/FBXLoader.js';
+    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.126.0/examples/jsm/controls/OrbitControls.js';
+
+    // Scene, Camera, and Renderer Initialization
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x121212);
+
+    const camera = new THREE.PerspectiveCamera(12, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    camera.position.set(3, 3, 5);
+    camera.lookAt(0, 0, 0);
+
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.1);
+    directionalLight.position.set(10, 10, 10);
+    directionalLight.castShadow = true;
+    directionalLight.shadow.mapSize.width = 1024;
+    directionalLight.shadow.mapSize.height = 1024;
+    scene.add(directionalLight);
+
+    // Orbit Controls
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.minDistance = 4.5;
+    controls.maxDistance = 10;
+
+    // Floor
+    const floorGeometry = new THREE.PlaneGeometry(20, 20);
+    const floorMaterial = new THREE.ShadowMaterial({ opacity: 0.4 });
+    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -0.4;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    // FBX Loader
+    const loader = new FBXLoader();
+    let mixer; // To handle animations
+    loader.load(
+      './toonhulk.fbx', // Update with your FBX file path
+      (fbx) => {
+        fbx.traverse((node) => {
+          if (node.isMesh) {
+            node.castShadow = true;
+            node.receiveShadow = true;
+          }
+        });
+fbx.rotation.x = -Math.PI / 2;
+		  fbx.position.y = -0.4;
+        scene.add(fbx);
+
+		  
+		      // Check for animations
+    if (fbx.animations && fbx.animations.length > 0) {
+      // Animation Mixer
+      mixer = new THREE.AnimationMixer(fbx);
+      const action = mixer.clipAction(fbx.animations[0]); // Play the first animation
+      action.play();
+      console.log('Animation started');
+    } else {
+      console.warn('No animations found in the FBX file');
+    }
+  },
+  (xhr) => {
+    console.log(`FBX loading progress: ${(xhr.loaded / xhr.total) * 100}%`);
+  },
+  (error) => {
+    console.error('Error loading FBX:', error);
+  }
+);
+
+    // Animate the scene
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Update animation mixer
+      if (mixer) mixer.update(clock.getDelta());
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // Handle window resizing
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
