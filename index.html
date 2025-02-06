@@ -1,1 +1,229 @@
-dd
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Afficher un fichier GLB avec Three.js</title>
+  <style>
+    body { margin: 0; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.126.0/build/three.module.js';
+    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.126.0/examples/jsm/loaders/GLTFLoader.js';
+    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.126.0/examples/jsm/controls/OrbitControls.js';
+
+    // Initialisation de la scène, de la caméra et du rendu
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x121212);
+
+    // Add Fog to the scene
+   // scene.fog = new THREE.Fog(0x000, 5, 7); // Color, near distance, far distance
+
+    const camera = new THREE.PerspectiveCamera(12, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({
+  antialias: true, // Enable antialiasing
+});
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true; // Activer les ombres
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Optionnel, ombres douces
+ //renderer.toneMapping = THREE.ReinhardToneMapping; // Apply Cineon ToneMapping
+//renderer.toneMappingExposure = 0.5; // Adjust brightness
+//renderer.outputEncoding = THREE.sRGBEncoding; // Ensure correct color space
+document.body.appendChild(renderer.domElement);
+
+camera.fov = Math.max(10, Math.min(camera.fov, 50)); // Restrict fov between 10 and 50
+camera.updateProjectionMatrix();
+
+
+    // Ajouter une lumière
+    const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0);
+    hemisphereLight.position.set(0, 20, 0);
+    scene.add(hemisphereLight);
+
+    // Ajouter une lumière ambiante blanche
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); // Couleur blanche, intensité 0.8
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.1);
+    directionalLight.position.set(10, 10, 10);
+    directionalLight.castShadow = true; // Activer les ombres pour cette lumière
+    directionalLight.shadow.mapSize.width = 1024; // Taille de la carte des ombres
+    directionalLight.shadow.mapSize.height = 1024;
+    directionalLight.shadow.camera.near = 0.5;
+    directionalLight.shadow.camera.far = 50;
+    scene.add(directionalLight);
+
+    const directionalLight2 = new THREE.DirectionalLight(0xff00ff, 2);
+    directionalLight2.position.set(-8, 1, -1);
+    directionalLight2.castShadow = false;
+    scene.add(directionalLight2);
+
+    const directionalLight3 = new THREE.DirectionalLight(0xeffd89, 1);
+    directionalLight3.position.set(-5, 3, 5);
+    directionalLight3.castShadow = true;
+    scene.add(directionalLight3);
+
+
+    const directionalLight4 = new THREE.DirectionalLight(0x9af7ff, 1);
+    directionalLight4.position.set(-8, 3, -1);
+    directionalLight4.castShadow = false;
+    scene.add(directionalLight4);
+
+    // Helpers pour les lumières
+    const hemisphereLightHelper = new THREE.HemisphereLightHelper(hemisphereLight, 2);
+    scene.add(hemisphereLightHelper);
+
+    const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 2);
+    scene.add(directionalLightHelper);
+
+    const directionalLightHelper2 = new THREE.DirectionalLightHelper(directionalLight2, 2);
+    scene.add(directionalLightHelper2);
+
+    const directionalLightHelper3 = new THREE.DirectionalLightHelper(directionalLight3, 2);
+    scene.add(directionalLightHelper3);
+
+    const directionalLightHelper4 = new THREE.DirectionalLightHelper(directionalLight4, 2);
+    scene.add(directionalLightHelper4);
+
+    // Contrôles OrbitControls
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true; // Adoucissement des mouvements
+    controls.autoRotate = false;  // Désactivé par défaut
+
+// Set zoom limits
+controls.minDistance = 4.5; // Minimum distance from the target
+controls.maxDistance = 12; // Maximum distance from the target
+
+// Log zoom level whenever the user interacts
+controls.addEventListener('change', () => {
+  console.log(`Camera position: ${camera.position.toArray().join(', ')}`);
+  console.log(`Camera field of view (fov): ${camera.fov}`);
+});
+
+
+
+    // État pour l'auto-rotation
+    let autoRotateEnabled = false;
+
+    // Écouteur de clavier pour activer/désactiver l'auto-rotation
+    window.addEventListener('keydown', (event) => {
+      if (event.key.toLowerCase() === 'r') {
+        autoRotateEnabled = !autoRotateEnabled;
+        controls.autoRotate = autoRotateEnabled;
+        console.log(`Auto-rotate is now ${autoRotateEnabled ? 'enabled' : 'disabled'}`);
+      }
+    });
+
+    // Ajouter un sol pour recevoir les ombres
+    const floorGeometry = new THREE.PlaneGeometry(20, 20);
+    const floorMaterial = new THREE.ShadowMaterial({ opacity: 1});
+    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+    floor.rotation.x = -Math.PI / 2; // Mettre le sol à plat
+    floor.position.y = -0.4; // Positionner le sol
+    floor.receiveShadow = true; // Permettre au sol de recevoir les ombres
+
+
+    scene.add(floor);
+
+	  
+// Import TextureLoader for the environment map
+const textureLoader = new THREE.TextureLoader();
+
+// Declare the environmentMap variable
+let environmentMap = null;
+/*
+// Load the 360-degree environment texture
+textureLoader.load(
+  'free hdr_map_808.jpg', // Path to your texture
+  (texture) => {
+    texture.mapping = THREE.EquirectangularReflectionMapping;
+
+    // Optional: Configure texture properties
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(0.010, 0.010); // Adjust these to scale the texture
+   // texture.offset.set(0, 0);
+
+    // Assign to environmentMap and use it for scene
+    environmentMap = texture;
+    scene.environment = texture; // Apply to the scene for reflections
+    scene.background = texture;  // Optionally use it as the scene's background
+  },
+  undefined,
+  (error) => {
+    console.error('Error loading environment map:', error);
+  }
+);*/
+
+// Load the GLB model and apply the environment map
+const loader = new GLTFLoader();
+loader.load(
+  './mecadino.glb', // Ensure this path is correct
+  (gltf) => {
+    const object = gltf.scene;
+    object.traverse((node) => {
+      if (node.isMesh) {
+
+          node.material.envMap = environmentMap; // Apply environment reflections
+          node.material.envMapIntensity = 1.0; // Adjust reflection intensity as needed
+                node.material.metalness = 0.4; // Increase metalness for reflective effect
+        node.material.roughness = 0.5; // Reduce roughness for sharper reflections
+        node.castShadow = true;
+        node.receiveShadow = true;
+      }
+    });
+    scene.add(object);
+    object.position.y = -0.033;
+
+    // Center the camera on the object
+    const box3 = new THREE.Box3().setFromObject(object);
+    const center = new THREE.Vector3();
+    box3.getCenter(center);
+    controls.target.set(center.x, center.y, center.z);
+  },
+  (xhr) => {
+    console.log(`Model loading progress: ${(xhr.loaded / xhr.total) * 100}%`);
+  },
+  (error) => {
+    console.error('Error loading model:', error);
+  }
+);
+
+
+    // Position de la caméra
+    camera.position.set(3, 3, 5);
+    camera.lookAt(0, 0, 0);
+
+// Animate the light
+const radius = 8; // Radius of the circular path
+let angle = 0; // Initial angle
+
+
+    // Fonction d'animation
+    function animate() {
+      requestAnimationFrame(animate);
+// Update the #blue light position
+  angle += 0.01; // Increment angle for rotation
+  directionalLight4.position.x = radius * Math.cos(angle);
+  directionalLight4.position.z = radius * Math.sin(angle);
+
+  // Update the helpers to match the light's new position
+  directionalLightHelper2.update();
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // Mise à jour du rendu à chaque redimensionnement de la fenêtre
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
